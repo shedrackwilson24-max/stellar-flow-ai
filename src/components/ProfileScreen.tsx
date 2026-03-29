@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Copy, Download, LogOut, Key, Shield, ChevronRight, Wallet, Loader2, CheckCircle2 } from 'lucide-react';
+import { Copy, Download, LogOut, Key, Shield, ChevronRight, Wallet, Loader2, Lock, Unlock } from 'lucide-react';
 import { useWallet } from '@/hooks/useWallet';
+import { usePin } from '@/hooks/usePin';
 import { toast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import PinLock from './PinLock';
 
 const ProfileScreen = () => {
   const { wallet, balance, loading, createWallet, importWallet, logout } = useWallet();
+  const { isPinSet, isLocked, setPin, lockWallet, clearPin } = usePin();
   const [showImport, setShowImport] = useState(false);
   const [importKey, setImportKey] = useState('');
+  const [showSetPin, setShowSetPin] = useState(false);
 
   const copyAddress = () => {
     if (!wallet) return;
@@ -44,8 +48,19 @@ const ProfileScreen = () => {
 
   const handleLogout = () => {
     logout();
+    clearPin();
     toast({ title: 'Logged out', description: 'Wallet disconnected' });
   };
+
+  const handlePinSet = (pin: string) => {
+    setPin(pin);
+    setShowSetPin(false);
+    toast({ title: 'PIN Set! 🔒', description: 'Your wallet is now secured' });
+  };
+
+  if (showSetPin) {
+    return <PinLock mode="set" onSuccess={handlePinSet} onCancel={() => setShowSetPin(false)} />;
+  }
 
   return (
     <div className="px-4 pb-28 pt-6 space-y-5">
@@ -119,20 +134,34 @@ const ProfileScreen = () => {
         </button>
       </motion.div>
 
-      {/* Settings */}
+      {/* Security */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
         className="space-y-2">
-        <h3 className="text-sm font-semibold text-foreground mb-2">Settings</h3>
-        <div className="glass-card p-4 flex items-center gap-3">
+        <h3 className="text-sm font-semibold text-foreground mb-2">Security</h3>
+        <button onClick={() => setShowSetPin(true)}
+          className="w-full glass-card p-4 flex items-center gap-3 hover:bg-secondary/50 transition-colors">
           <div className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center">
-            <Shield className="w-4 h-4 text-muted-foreground" />
+            <Shield className="w-4 h-4 text-primary" />
           </div>
           <div className="flex-1 text-left">
-            <p className="text-sm font-medium text-foreground">Security</p>
-            <p className="text-xs text-muted-foreground">Backup & recovery options</p>
+            <p className="text-sm font-medium text-foreground">{isPinSet ? 'Change PIN' : 'Set PIN Lock'}</p>
+            <p className="text-xs text-muted-foreground">{isPinSet ? 'PIN is active' : '4-digit security PIN'}</p>
           </div>
           <ChevronRight className="w-4 h-4 text-muted-foreground" />
-        </div>
+        </button>
+        {wallet && isPinSet && (
+          <button onClick={lockWallet}
+            className="w-full glass-card p-4 flex items-center gap-3 hover:bg-secondary/50 transition-colors">
+            <div className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center">
+              <Lock className="w-4 h-4 text-accent" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-sm font-medium text-foreground">Lock Wallet</p>
+              <p className="text-xs text-muted-foreground">Require PIN to access</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </button>
+        )}
       </motion.div>
 
       {/* Logout */}
@@ -146,7 +175,6 @@ const ProfileScreen = () => {
         </motion.div>
       )}
 
-      {/* Powered by Stellar */}
       <div className="text-center py-4">
         <span className="text-xs text-muted-foreground">Powered by <span className="neon-gradient-text font-semibold">Stellar</span> ⚡</span>
       </div>
@@ -160,12 +188,8 @@ const ProfileScreen = () => {
           <div className="space-y-4 py-2">
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Secret Key</label>
-              <input
-                value={importKey}
-                onChange={(e) => setImportKey(e.target.value)}
-                placeholder="S..."
-                className="w-full bg-secondary/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono"
-              />
+              <input value={importKey} onChange={(e) => setImportKey(e.target.value)} placeholder="S..."
+                className="w-full bg-secondary/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono" />
               <p className="text-[10px] text-muted-foreground mt-1">Your secret key starts with 'S' and is 56 characters long</p>
             </div>
             <button onClick={handleImport} disabled={loading}
