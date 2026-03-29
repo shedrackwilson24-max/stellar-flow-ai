@@ -6,6 +6,7 @@ import SendScreen from '@/components/SendScreen';
 import ExploreScreen from '@/components/ExploreScreen';
 import AIAssistant from '@/components/AIAssistant';
 import ProfileScreen from '@/components/ProfileScreen';
+import { WalletProvider } from '@/hooks/useWallet';
 
 type Tab = 'home' | 'send' | 'explore' | 'ai' | 'profile';
 
@@ -28,20 +29,22 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background max-w-md mx-auto relative">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, x: 10 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -10 }}
-          transition={{ duration: 0.2 }}
-        >
-          {renderScreen()}
-        </motion.div>
-      </AnimatePresence>
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
-    </div>
+    <WalletProvider>
+      <div className="min-h-screen bg-background max-w-md mx-auto relative">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            {renderScreen()}
+          </motion.div>
+        </AnimatePresence>
+        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
+    </WalletProvider>
   );
 };
 

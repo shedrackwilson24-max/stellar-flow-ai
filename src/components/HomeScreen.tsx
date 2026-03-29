@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion';
-import { Copy, ArrowUpRight, ArrowDownLeft, Compass, Sparkles, TrendingUp, TrendingDown, Clock } from 'lucide-react';
-import { BALANCE, WALLET_ADDRESS, TRANSACTIONS, SPENDING_DATA } from '@/lib/mockData';
+import { Copy, ArrowUpRight, ArrowDownLeft, Compass, Sparkles, Clock, RefreshCw, Loader2 } from 'lucide-react';
+import { TRANSACTIONS, SPENDING_DATA } from '@/lib/mockData';
 import { toast } from '@/hooks/use-toast';
 import { BarChart, Bar, XAxis, ResponsiveContainer } from 'recharts';
 import { useState } from 'react';
 import ReceiveModal from './ReceiveModal';
+import { useWallet } from '@/hooks/useWallet';
 
 interface HomeScreenProps {
   onNavigate: (tab: 'send' | 'explore') => void;
@@ -12,11 +13,18 @@ interface HomeScreenProps {
 
 const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
   const [showReceive, setShowReceive] = useState(false);
+  const { wallet, balance, balanceLoading, refreshBalance } = useWallet();
 
   const copyAddress = () => {
-    navigator.clipboard.writeText(WALLET_ADDRESS);
+    if (!wallet) return;
+    navigator.clipboard.writeText(wallet.publicKey);
     toast({ title: 'Address copied!', description: 'Wallet address copied to clipboard' });
   };
+
+  const xlmBalance = balance?.xlmBalance || '0.00';
+  const usdValue = balance?.usdValue || '$0.00';
+  const displayAddress = wallet?.publicKey || 'No wallet connected';
+  const truncatedAddress = wallet ? `${wallet.publicKey.slice(0, 8)}...${wallet.publicKey.slice(-6)}` : 'No wallet';
 
   return (
     <div className="px-4 pb-28 pt-6 space-y-5">
@@ -35,13 +43,43 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
         className="glass-card p-5 glow-green relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-primary/5 blur-3xl" />
-        <p className="text-muted-foreground text-sm mb-1">Total Balance</p>
-        <h2 className="text-3xl font-bold text-foreground glow-text-green">{BALANCE.xlm} <span className="text-lg text-muted-foreground">XLM</span></h2>
-        <p className="text-sm text-muted-foreground mt-1">≈ {BALANCE.usd}</p>
-        <button onClick={copyAddress} className="mt-3 flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
-          <span className="font-mono truncate max-w-[180px]">{WALLET_ADDRESS}</span>
-          <Copy className="w-3 h-3 shrink-0" />
-        </button>
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-muted-foreground text-sm">Total Balance</p>
+          <button onClick={refreshBalance} disabled={balanceLoading}
+            className="text-muted-foreground hover:text-foreground transition-colors">
+            {balanceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          </button>
+        </div>
+        <h2 className="text-3xl font-bold text-foreground glow-text-green">
+          {xlmBalance} <span className="text-lg text-muted-foreground">XLM</span>
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">≈ {usdValue}</p>
+        {wallet && (
+          <button onClick={copyAddress} className="mt-3 flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
+            <span className="font-mono truncate max-w-[180px]">{truncatedAddress}</span>
+            <Copy className="w-3 h-3 shrink-0" />
+          </button>
+        )}
+        {!wallet && (
+          <p className="mt-3 text-xs text-muted-foreground">Go to Profile to create or import a wallet</p>
+        )}
+        {wallet && (
+          <div className="mt-2 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse-glow" />
+            <span className="text-[10px] text-primary font-medium">Stellar Testnet</span>
+          </div>
+        )}
+        {/* Show extra balances */}
+        {balance?.balances && balance.balances.filter(b => b.asset_type !== 'native').length > 0 && (
+          <div className="mt-3 pt-3 border-t border-border/30 space-y-1">
+            {balance.balances.filter(b => b.asset_type !== 'native').map((b, i) => (
+              <div key={i} className="flex justify-between text-xs">
+                <span className="text-muted-foreground">{b.asset_code || 'Unknown'}</span>
+                <span className="text-foreground font-medium">{parseFloat(b.balance).toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </motion.div>
 
       {/* Quick Actions */}
