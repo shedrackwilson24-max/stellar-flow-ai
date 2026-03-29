@@ -3,47 +3,84 @@ import { motion } from 'framer-motion';
 import { ArrowUpRight, ChevronDown, Loader2, CheckCircle2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
+import { useWallet } from '@/hooks/useWallet';
+import { stellarApi } from '@/lib/stellarApi';
 import ScheduledPayments from './ScheduledPayments';
 
-const ASSETS = ['XLM', 'USDC', 'GAME', 'NGNX'];
+const ASSETS = ['XLM'];
 
 const SendScreen = () => {
+  const { wallet, refreshBalance } = useWallet();
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
   const [asset, setAsset] = useState('XLM');
+  const [memo, setMemo] = useState('');
   const [showAssets, setShowAssets] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [txHash, setTxHash] = useState('');
 
   const handleSend = () => {
+    if (!wallet) {
+      toast({ title: 'No wallet', description: 'Create or import a wallet first', variant: 'destructive' });
+      return;
+    }
     if (!recipient || !amount) {
       toast({ title: 'Missing fields', description: 'Please fill in all fields', variant: 'destructive' });
+      return;
+    }
+    if (parseFloat(amount) <= 0) {
+      toast({ title: 'Invalid amount', description: 'Amount must be positive', variant: 'destructive' });
       return;
     }
     setShowConfirm(true);
   };
 
   const confirmSend = async () => {
+    if (!wallet) return;
     setSending(true);
-    await new Promise((r) => setTimeout(r, 2000));
-    setSending(false);
-    setSent(true);
-    setTimeout(() => {
+    try {
+      const result = await stellarApi.sendPayment({
+        secretKey: wallet.secretKey,
+        destination: recipient,
+        amount,
+        memo: memo || undefined,
+      });
+      setTxHash(result.hash);
+      setSent(true);
+      await refreshBalance();
+      setTimeout(() => {
+        setShowConfirm(false);
+        setSent(false);
+        setRecipient('');
+        setAmount('');
+        setMemo('');
+        setTxHash('');
+        toast({ title: 'Transaction sent! ✅', description: `Hash: ${result.hash.slice(0, 12)}...` });
+      }, 2000);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Transaction failed';
+      toast({ title: 'Transaction failed', description: msg, variant: 'destructive' });
       setShowConfirm(false);
-      setSent(false);
-      setRecipient('');
-      setAmount('');
-      toast({ title: 'Transaction sent!', description: `${amount} ${asset} sent successfully` });
-    }, 1500);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
     <div className="px-4 pb-28 pt-6 space-y-5">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-xl font-bold text-foreground">Send Money</h1>
-        <p className="text-sm text-muted-foreground">Transfer funds instantly on Stellar</p>
+        <p className="text-sm text-muted-foreground">Transfer funds on Stellar {wallet ? 'Testnet' : ''}</p>
       </motion.div>
+
+      {!wallet && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="glass-card p-5 text-center">
+          <p className="text-sm text-muted-foreground">Create or import a wallet in the Profile tab to send payments.</p>
+        </motion.div>
+      )}
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
         className="glass-card p-5 space-y-4">
@@ -87,9 +124,21 @@ const SendScreen = () => {
           )}
         </div>
 
+        {/* Memo */}
+        <div>
+          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Memo (optional)</label>
+          <input
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            placeholder="Add a note..."
+            maxLength={28}
+            className="w-full bg-secondary/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+
         {/* Send Button */}
-        <button onClick={handleSend}
-          className="w-full neon-gradient text-primary-foreground font-semibold py-3 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity active:scale-[0.98]">
+        <button onClick={handleSend} disabled={!wallet}
+          className="w-full neon-gradient text-primary-foreground font-semibold py-3 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity active:scale-[0.98] disabled:opacity-40">
           <ArrowUpRight className="w-4 h-4" /> Send {asset}
         </button>
       </motion.div>
@@ -110,7 +159,10 @@ const SendScreen = () => {
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
                 <CheckCircle2 className="w-16 h-16 text-primary" />
               </motion.div>
-              <p className="text-sm text-muted-foreground mt-3">Successfully sent</p>
+              <p className="text-sm text-muted-foreground mt-3">Successfully sent on Stellar</p>
+              {txHash && (
+                <p className="text-[10px] text-muted-foreground mt-1 font-mono break-all px-4 text-center">{txHash}</p>
+              )}
             </div>
           ) : (
             <div className="space-y-3 py-2">
@@ -123,16 +175,26 @@ const SendScreen = () => {
                 <span className="text-foreground font-semibold">{amount} {asset}</span>
               </div>
               <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Network</span>
+                <span className="text-primary text-xs">Stellar Testnet</span>
+              </div>
+              <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Fee</span>
                 <span className="text-primary text-xs">~0.00001 XLM</span>
               </div>
+              {memo && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Memo</span>
+                  <span className="text-foreground text-xs">{memo}</span>
+                </div>
+              )}
             </div>
           )}
           {!sent && (
             <DialogFooter>
               <button onClick={confirmSend} disabled={sending}
                 className="w-full neon-gradient text-primary-foreground font-semibold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50">
-                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm & Send'}
+                {sending ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : 'Confirm & Send'}
               </button>
             </DialogFooter>
           )}

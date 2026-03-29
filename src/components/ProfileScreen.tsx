@@ -1,20 +1,50 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Copy, Download, LogOut, Key, Shield, ChevronRight, Wallet } from 'lucide-react';
-import { WALLET_ADDRESS } from '@/lib/mockData';
+import { Copy, Download, LogOut, Key, Shield, ChevronRight, Wallet, Loader2, CheckCircle2 } from 'lucide-react';
+import { useWallet } from '@/hooks/useWallet';
 import { toast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const ProfileScreen = () => {
-  const [hasWallet, setHasWallet] = useState(true);
+  const { wallet, balance, loading, createWallet, importWallet, logout } = useWallet();
+  const [showImport, setShowImport] = useState(false);
+  const [importKey, setImportKey] = useState('');
 
   const copyAddress = () => {
-    navigator.clipboard.writeText(WALLET_ADDRESS);
+    if (!wallet) return;
+    navigator.clipboard.writeText(wallet.publicKey);
     toast({ title: 'Copied!', description: 'Wallet address copied to clipboard' });
   };
 
-  const createWallet = () => {
-    setHasWallet(true);
-    toast({ title: 'Wallet Created!', description: 'Your new Stellar wallet is ready' });
+  const handleCreate = async () => {
+    try {
+      await createWallet();
+      toast({ title: 'Wallet Created! 🎉', description: 'Funded with testnet XLM via Friendbot' });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to create wallet';
+      toast({ title: 'Error', description: msg, variant: 'destructive' });
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importKey.trim()) {
+      toast({ title: 'Missing key', description: 'Enter your secret key', variant: 'destructive' });
+      return;
+    }
+    try {
+      await importWallet(importKey.trim());
+      setShowImport(false);
+      setImportKey('');
+      toast({ title: 'Wallet Imported! ✅', description: 'Your wallet is ready' });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to import wallet';
+      toast({ title: 'Error', description: msg, variant: 'destructive' });
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    toast({ title: 'Logged out', description: 'Wallet disconnected' });
   };
 
   return (
@@ -34,74 +64,117 @@ const ProfileScreen = () => {
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground">Stellar Wallet</p>
-            <p className="text-xs text-primary">Connected</p>
+            {wallet ? (
+              <p className="text-xs text-primary">Connected • Testnet</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Not connected</p>
+            )}
           </div>
         </div>
-        <div>
-          <p className="text-xs text-muted-foreground mb-1">Public Key</p>
-          <button onClick={copyAddress}
-            className="w-full bg-secondary/50 rounded-xl p-3 flex items-center justify-between hover:bg-secondary/70 transition-colors">
-            <span className="font-mono text-xs text-foreground truncate">{WALLET_ADDRESS}</span>
-            <Copy className="w-4 h-4 text-muted-foreground shrink-0 ml-2" />
-          </button>
-        </div>
+        {wallet ? (
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Public Key</p>
+            <button onClick={copyAddress}
+              className="w-full bg-secondary/50 rounded-xl p-3 flex items-center justify-between hover:bg-secondary/70 transition-colors">
+              <span className="font-mono text-[10px] text-foreground truncate">{wallet.publicKey}</span>
+              <Copy className="w-4 h-4 text-muted-foreground shrink-0 ml-2" />
+            </button>
+            {balance && (
+              <div className="mt-3 flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Balance</span>
+                <span className="text-foreground font-semibold">{balance.xlmBalance} XLM</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Create or import a wallet to get started</p>
+        )}
       </motion.div>
 
       {/* Wallet Actions */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
         className="space-y-2">
         <h3 className="text-sm font-semibold text-foreground mb-2">Wallet</h3>
-        {[
-          { icon: Key, label: 'Create New Wallet', desc: 'Generate a new Stellar keypair', action: createWallet },
-          { icon: Download, label: 'Import Wallet', desc: 'Import with secret key', action: () => toast({ title: 'Import', description: 'Import wallet functionality (simulated)' }) },
-        ].map((item) => (
-          <button key={item.label} onClick={item.action}
-            className="w-full glass-card p-4 flex items-center gap-3 hover:bg-secondary/50 transition-colors">
-            <div className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center">
-              <item.icon className="w-4 h-4 text-accent" />
-            </div>
-            <div className="flex-1 text-left">
-              <p className="text-sm font-medium text-foreground">{item.label}</p>
-              <p className="text-xs text-muted-foreground">{item.desc}</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </button>
-        ))}
+        <button onClick={handleCreate} disabled={loading}
+          className="w-full glass-card p-4 flex items-center gap-3 hover:bg-secondary/50 transition-colors disabled:opacity-50">
+          <div className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center">
+            {loading ? <Loader2 className="w-4 h-4 text-accent animate-spin" /> : <Key className="w-4 h-4 text-accent" />}
+          </div>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-medium text-foreground">Create New Wallet</p>
+            <p className="text-xs text-muted-foreground">Generate keypair & fund on testnet</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        </button>
+        <button onClick={() => setShowImport(true)} disabled={loading}
+          className="w-full glass-card p-4 flex items-center gap-3 hover:bg-secondary/50 transition-colors disabled:opacity-50">
+          <div className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center">
+            <Download className="w-4 h-4 text-accent" />
+          </div>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-medium text-foreground">Import Wallet</p>
+            <p className="text-xs text-muted-foreground">Import with Stellar secret key</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        </button>
       </motion.div>
 
       {/* Settings */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
         className="space-y-2">
         <h3 className="text-sm font-semibold text-foreground mb-2">Settings</h3>
-        {[
-          { icon: Shield, label: 'Security', desc: 'Backup & recovery options' },
-        ].map((item) => (
-          <button key={item.label}
-            className="w-full glass-card p-4 flex items-center gap-3 hover:bg-secondary/50 transition-colors">
-            <div className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center">
-              <item.icon className="w-4 h-4 text-muted-foreground" />
-            </div>
-            <div className="flex-1 text-left">
-              <p className="text-sm font-medium text-foreground">{item.label}</p>
-              <p className="text-xs text-muted-foreground">{item.desc}</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </button>
-        ))}
+        <div className="glass-card p-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center">
+            <Shield className="w-4 h-4 text-muted-foreground" />
+          </div>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-medium text-foreground">Security</p>
+            <p className="text-xs text-muted-foreground">Backup & recovery options</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        </div>
       </motion.div>
 
       {/* Logout */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-        <button className="w-full glass-card p-4 flex items-center justify-center gap-2 text-destructive hover:bg-destructive/10 transition-colors">
-          <LogOut className="w-4 h-4" />
-          <span className="text-sm font-medium">Logout</span>
-        </button>
-      </motion.div>
+      {wallet && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+          <button onClick={handleLogout}
+            className="w-full glass-card p-4 flex items-center justify-center gap-2 text-destructive hover:bg-destructive/10 transition-colors">
+            <LogOut className="w-4 h-4" />
+            <span className="text-sm font-medium">Disconnect Wallet</span>
+          </button>
+        </motion.div>
+      )}
 
       {/* Powered by Stellar */}
       <div className="text-center py-4">
         <span className="text-xs text-muted-foreground">Powered by <span className="neon-gradient-text font-semibold">Stellar</span> ⚡</span>
       </div>
+
+      {/* Import Modal */}
+      <Dialog open={showImport} onOpenChange={setShowImport}>
+        <DialogContent className="glass-card border-border/50 max-w-sm mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Import Wallet</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Secret Key</label>
+              <input
+                value={importKey}
+                onChange={(e) => setImportKey(e.target.value)}
+                placeholder="S..."
+                className="w-full bg-secondary/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">Your secret key starts with 'S' and is 56 characters long</p>
+            </div>
+            <button onClick={handleImport} disabled={loading}
+              className="w-full neon-gradient text-primary-foreground font-semibold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50">
+              {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Importing...</> : 'Import Wallet'}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
