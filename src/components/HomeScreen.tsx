@@ -1,15 +1,25 @@
 import { motion } from 'framer-motion';
-import { Copy, ArrowUpRight, ArrowDownLeft, Compass, Sparkles, Clock, RefreshCw, Loader2 } from 'lucide-react';
+import { Copy, ArrowUpRight, ArrowDownLeft, Compass, Sparkles, Clock, RefreshCw, Loader2, TrendingUp, Users } from 'lucide-react';
 import { TRANSACTIONS, SPENDING_DATA } from '@/lib/mockData';
 import { toast } from '@/hooks/use-toast';
 import { BarChart, Bar, XAxis, ResponsiveContainer } from 'recharts';
 import { useState } from 'react';
 import ReceiveModal from './ReceiveModal';
+import CurrencyConverter from './CurrencyConverter';
+import GamificationCard from './GamificationCard';
 import { useWallet } from '@/hooks/useWallet';
+import { Tab } from './BottomNav';
 
 interface HomeScreenProps {
-  onNavigate: (tab: 'send' | 'explore') => void;
+  onNavigate: (tab: Tab) => void;
 }
+
+const MONTHLY_DATA = [
+  { month: 'Jan', amount: 1200 },
+  { month: 'Feb', amount: 980 },
+  { month: 'Mar', amount: 1500 },
+  { month: 'Apr', amount: 800 },
+];
 
 const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
   const [showReceive, setShowReceive] = useState(false);
@@ -23,7 +33,6 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
 
   const xlmBalance = balance?.xlmBalance || '0.00';
   const usdValue = balance?.usdValue || '$0.00';
-  const displayAddress = wallet?.publicKey || 'No wallet connected';
   const truncatedAddress = wallet ? `${wallet.publicKey.slice(0, 8)}...${wallet.publicKey.slice(-6)}` : 'No wallet';
 
   return (
@@ -69,7 +78,6 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
             <span className="text-[10px] text-primary font-medium">Stellar Testnet</span>
           </div>
         )}
-        {/* Show extra balances */}
         {balance?.balances && balance.balances.filter(b => b.asset_type !== 'native').length > 0 && (
           <div className="mt-3 pt-3 border-t border-border/30 space-y-1">
             {balance.balances.filter(b => b.asset_type !== 'native').map((b, i) => (
@@ -84,32 +92,39 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
 
       {/* Quick Actions */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-        className="grid grid-cols-3 gap-3">
+        className="grid grid-cols-4 gap-2">
         {[
           { icon: ArrowUpRight, label: 'Send', color: 'text-primary', action: () => onNavigate('send') },
           { icon: ArrowDownLeft, label: 'Receive', color: 'text-accent', action: () => setShowReceive(true) },
-          { icon: Compass, label: 'Explore', color: 'text-neon-purple', action: () => onNavigate('explore') },
+          { icon: Users, label: 'Contacts', color: 'text-neon-purple', action: () => onNavigate('contacts') },
+          { icon: Compass, label: 'Explore', color: 'text-primary', action: () => onNavigate('explore') },
         ].map((item) => (
           <button key={item.label} onClick={item.action}
-            className="glass-card p-4 flex flex-col items-center gap-2 hover:bg-secondary/50 transition-colors active:scale-95">
-            <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
-              <item.icon className={`w-5 h-5 ${item.color}`} />
+            className="glass-card p-3 flex flex-col items-center gap-1.5 hover:bg-secondary/50 transition-colors active:scale-95">
+            <div className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center">
+              <item.icon className={`w-4 h-4 ${item.color}`} />
             </div>
-            <span className="text-xs font-medium text-foreground">{item.label}</span>
+            <span className="text-[10px] font-medium text-foreground">{item.label}</span>
           </button>
         ))}
       </motion.div>
 
-      {/* AI Insight */}
+      {/* AI Insight + Storytelling */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
         className="glass-card p-4 flex items-center gap-3 gradient-border">
         <div className="w-8 h-8 rounded-lg neon-gradient flex items-center justify-center shrink-0">
           <Sparkles className="w-4 h-4 text-primary-foreground" />
         </div>
-        <p className="text-xs text-secondary-foreground">You saved <span className="text-primary font-semibold">30% in fees</span> using Stellar this week 🎉</p>
+        <div className="space-y-0.5">
+          <p className="text-xs text-secondary-foreground">You saved <span className="text-primary font-semibold">30% in fees</span> using Stellar this week 🎉</p>
+          <p className="text-[10px] text-muted-foreground italic">"Financial freedom, simplified."</p>
+        </div>
       </motion.div>
 
-      {/* Insights Card */}
+      {/* Currency Converter */}
+      <CurrencyConverter />
+
+      {/* Insights */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
         className="glass-card p-4 space-y-3">
         <div className="flex items-center justify-between">
@@ -129,13 +144,38 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
           <span>•</span>
           <span className="text-primary">↓ 12% vs last week</span>
         </div>
+        {/* AI tip */}
+        <div className="bg-accent/5 rounded-xl px-3 py-2 flex items-center gap-2">
+          <TrendingUp className="w-3.5 h-3.5 text-accent shrink-0" />
+          <p className="text-[11px] text-muted-foreground">You are spending more on transfers this week. Consider batching payments.</p>
+        </div>
       </motion.div>
 
+      {/* Monthly overview */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+        className="glass-card p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-foreground">Monthly Overview</h3>
+        <div className="h-20">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={MONTHLY_DATA}>
+              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: 'hsl(260 10% 55%)', fontSize: 10 }} />
+              <Bar dataKey="amount" fill="hsl(210 100% 60%)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </motion.div>
+
+      {/* Gamification */}
+      <GamificationCard />
+
       {/* Recent Transactions */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-        <h3 className="text-sm font-semibold text-foreground mb-3">Recent Transactions</h3>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-foreground">Recent Transactions</h3>
+          <button onClick={() => onNavigate('activity')} className="text-xs text-primary hover:underline">View all</button>
+        </div>
         <div className="space-y-2">
-          {TRANSACTIONS.map((tx) => (
+          {TRANSACTIONS.slice(0, 3).map((tx) => (
             <div key={tx.id} className="glass-card p-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${tx.type === 'sent' ? 'bg-destructive/10' : 'bg-primary/10'}`}>
@@ -146,16 +186,9 @@ const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
                   <p className="text-xs text-muted-foreground">{tx.address} • {tx.date}</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className={`text-sm font-semibold ${tx.type === 'sent' ? 'text-destructive' : 'text-primary'}`}>
-                  {tx.type === 'sent' ? '-' : '+'}{tx.amount} {tx.asset}
-                </p>
-                {tx.status === 'pending' && (
-                  <span className="text-[10px] text-muted-foreground flex items-center gap-1 justify-end">
-                    <Clock className="w-2.5 h-2.5" /> Pending
-                  </span>
-                )}
-              </div>
+              <p className={`text-sm font-semibold ${tx.type === 'sent' ? 'text-destructive' : 'text-primary'}`}>
+                {tx.type === 'sent' ? '-' : '+'}{tx.amount} {tx.asset}
+              </p>
             </div>
           ))}
         </div>
