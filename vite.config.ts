@@ -30,6 +30,5 @@ export default defineConfig(({ mode }) => ({
       "@radix-ui/react-toast",
       "framer-motion",
     ],
-    force: true,
   },
 }));
