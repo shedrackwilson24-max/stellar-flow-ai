@@ -1,16 +1,48 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import BottomNav from '@/components/BottomNav';
+import HomeScreen from '@/components/HomeScreen';
+import SendScreen from '@/components/SendScreen';
+import ExploreScreen from '@/components/ExploreScreen';
+import AIAssistant from '@/components/AIAssistant';
+import ProfileScreen from '@/components/ProfileScreen';
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+type Tab = 'home' | 'send' | 'explore' | 'ai' | 'profile';
+
+const Index = () => {
+  const [activeTab, setActiveTab] = useState<Tab>('home');
+
+  const renderScreen = () => {
+    switch (activeTab) {
+      case 'home':
+        return <HomeScreen onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'send':
+        return <SendScreen />;
+      case 'explore':
+        return <ExploreScreen />;
+      case 'ai':
+        return <AIAssistant />;
+      case 'profile':
+        return <ProfileScreen />;
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen bg-background max-w-md mx-auto relative">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -10 }}
+          transition={{ duration: 0.2 }}
+        >
+          {renderScreen()}
+        </motion.div>
+      </AnimatePresence>
+      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
