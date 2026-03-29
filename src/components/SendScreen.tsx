@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUpRight, ChevronDown, Loader2, CheckCircle2 } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, Loader2, CheckCircle2, Shield } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { useWallet } from '@/hooks/useWallet';
+import { usePin } from '@/hooks/usePin';
 import { stellarApi } from '@/lib/stellarApi';
 import ScheduledPayments from './ScheduledPayments';
+import PinLock from './PinLock';
 
 const ASSETS = ['XLM'];
 
 const SendScreen = () => {
   const { wallet, refreshBalance } = useWallet();
+  const { isPinSet, verifyPin } = usePin();
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
   const [asset, setAsset] = useState('XLM');
@@ -20,6 +23,7 @@ const SendScreen = () => {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [txHash, setTxHash] = useState('');
+  const [showPinVerify, setShowPinVerify] = useState(false);
 
   const handleSend = () => {
     if (!wallet) {
@@ -34,7 +38,21 @@ const SendScreen = () => {
       toast({ title: 'Invalid amount', description: 'Amount must be positive', variant: 'destructive' });
       return;
     }
-    setShowConfirm(true);
+    // If PIN is set, require verification first
+    if (isPinSet) {
+      setShowPinVerify(true);
+    } else {
+      setShowConfirm(true);
+    }
+  };
+
+  const handlePinSuccess = (pin: string) => {
+    if (verifyPin(pin)) {
+      setShowPinVerify(false);
+      setShowConfirm(true);
+    } else {
+      toast({ title: 'Wrong PIN', description: 'Please try again', variant: 'destructive' });
+    }
   };
 
   const confirmSend = async () => {
@@ -50,6 +68,7 @@ const SendScreen = () => {
       setTxHash(result.hash);
       setSent(true);
       await refreshBalance();
+      toast({ title: 'Payment sent successfully! ✅', description: `You sent money across borders instantly.` });
       setTimeout(() => {
         setShowConfirm(false);
         setSent(false);
@@ -57,8 +76,7 @@ const SendScreen = () => {
         setAmount('');
         setMemo('');
         setTxHash('');
-        toast({ title: 'Transaction sent! ✅', description: `Hash: ${result.hash.slice(0, 12)}...` });
-      }, 2000);
+      }, 2500);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Transaction failed';
       toast({ title: 'Transaction failed', description: msg, variant: 'destructive' });
@@ -67,6 +85,10 @@ const SendScreen = () => {
       setSending(false);
     }
   };
+
+  if (showPinVerify) {
+    return <PinLock mode="verify" onSuccess={handlePinSuccess} onCancel={() => setShowPinVerify(false)} title="Confirm Payment" />;
+  }
 
   return (
     <div className="px-4 pb-28 pt-6 space-y-5">
@@ -84,28 +106,17 @@ const SendScreen = () => {
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
         className="glass-card p-5 space-y-4">
-        {/* Recipient */}
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Recipient Address</label>
-          <input
-            value={recipient}
-            onChange={(e) => setRecipient(e.target.value)}
-            placeholder="G..."
-            className="w-full bg-secondary/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono"
-          />
+          <input value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="G..."
+            className="w-full bg-secondary/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono" />
         </div>
 
-        {/* Amount */}
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Amount</label>
           <div className="flex gap-2">
-            <input
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              type="number"
-              className="flex-1 bg-secondary/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-            />
+            <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" type="number"
+              className="flex-1 bg-secondary/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
             <button onClick={() => setShowAssets(!showAssets)}
               className="glass-card px-4 py-3 flex items-center gap-2 text-sm font-medium text-foreground hover:bg-secondary/50 transition-colors min-w-[90px] justify-center">
               {asset} <ChevronDown className="w-3 h-3" />
@@ -124,26 +135,29 @@ const SendScreen = () => {
           )}
         </div>
 
-        {/* Memo */}
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Memo (optional)</label>
-          <input
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-            placeholder="Add a note..."
-            maxLength={28}
-            className="w-full bg-secondary/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          />
+          <input value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="Add a note..." maxLength={28}
+            className="w-full bg-secondary/50 border border-border/50 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
         </div>
 
-        {/* Send Button */}
         <button onClick={handleSend} disabled={!wallet}
           className="w-full neon-gradient text-primary-foreground font-semibold py-3 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity active:scale-[0.98] disabled:opacity-40">
+          {isPinSet && <Shield className="w-4 h-4" />}
           <ArrowUpRight className="w-4 h-4" /> Send {asset}
         </button>
+
+        {isPinSet && (
+          <p className="text-[10px] text-muted-foreground text-center">🔒 PIN verification required before sending</p>
+        )}
       </motion.div>
 
-      {/* Scheduled Payments */}
+      {/* Storytelling */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+        className="glass-card p-3 gradient-border text-center">
+        <p className="text-[11px] text-muted-foreground italic">"No hidden fees. Powered by Stellar."</p>
+      </motion.div>
+
       <ScheduledPayments />
 
       {/* Confirm Modal */}
@@ -151,7 +165,7 @@ const SendScreen = () => {
         <DialogContent className="glass-card border-border/50 max-w-sm mx-auto">
           <DialogHeader>
             <DialogTitle className="text-foreground">
-              {sent ? 'Transaction Sent!' : 'Confirm Transaction'}
+              {sent ? 'Transaction Sent! 🎉' : 'Confirm Transaction'}
             </DialogTitle>
           </DialogHeader>
           {sent ? (
@@ -159,9 +173,10 @@ const SendScreen = () => {
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
                 <CheckCircle2 className="w-16 h-16 text-primary" />
               </motion.div>
-              <p className="text-sm text-muted-foreground mt-3">Successfully sent on Stellar</p>
+              <p className="text-sm text-foreground font-semibold mt-3">You sent money across borders instantly!</p>
+              <p className="text-xs text-muted-foreground mt-1">No hidden fees. Powered by Stellar.</p>
               {txHash && (
-                <p className="text-[10px] text-muted-foreground mt-1 font-mono break-all px-4 text-center">{txHash}</p>
+                <p className="text-[10px] text-muted-foreground mt-2 font-mono break-all px-4 text-center">{txHash}</p>
               )}
             </div>
           ) : (
