@@ -3,15 +3,14 @@ import { motion } from 'framer-motion';
 import { ArrowDownUp, TrendingDown } from 'lucide-react';
 
 const RATES: Record<string, { rate: number; symbol: string; flag: string }> = {
-  NGN: { rate: 750.5, symbol: '₦', flag: '🇳🇬' },
-  GBP: { rate: 0.39, symbol: '£', flag: '🇬🇧' },
   USD: { rate: 0.50, symbol: '$', flag: '🇺🇸' },
+  GBP: { rate: 0.39, symbol: '£', flag: '🇬🇧' },
   EUR: { rate: 0.46, symbol: '€', flag: '🇪🇺' },
 };
 
 const CurrencyConverter = () => {
   const [xlmAmount, setXlmAmount] = useState('100');
-  const [currency, setCurrency] = useState('NGN');
+  const [currency, setCurrency] = useState('USD');
 
   const amount = parseFloat(xlmAmount) || 0;
   const rate = RATES[currency];

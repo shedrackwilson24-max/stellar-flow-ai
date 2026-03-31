@@ -37,7 +37,7 @@ export const BALANCE = {
 
 export const TOKENS: Token[] = [
   { symbol: 'USDC', name: 'USD Coin', description: 'Dollar-pegged stablecoin on Stellar', category: 'stablecoins', price: '$1.00', change: '+0.01%', icon: '💵' },
-  { symbol: 'NGNX', name: 'Nigerian Naira Token', description: 'Naira stablecoin for Africa payments', category: 'stablecoins', price: '$0.0013', change: '-0.02%', icon: '🇳🇬' },
+  { symbol: 'EURC', name: 'Euro Coin', description: 'Euro-pegged stablecoin on Stellar', category: 'stablecoins', price: '$1.08', change: '+0.03%', icon: '💶' },
   { symbol: 'GAME', name: 'GameFi Token', description: 'In-game currency for Web3 gaming', category: 'gaming', price: '$0.42', change: '+12.5%', icon: '🎮' },
   { symbol: 'HOUSE', name: 'RealEstate Token', description: 'Fractional real estate ownership', category: 'real-world', price: '$15.20', change: '+2.1%', icon: '🏠' },
   { symbol: 'CREATOR', name: 'Creator Coin', description: 'Support your favorite creators', category: 'real-world', price: '$0.85', change: '+5.3%', icon: '🎨' },

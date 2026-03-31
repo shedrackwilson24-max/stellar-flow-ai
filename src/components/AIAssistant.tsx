@@ -103,7 +103,7 @@ const AIAssistant = ({ onNavigate }: AIAssistantProps) => {
     const lower = text.toLowerCase();
 
     // Send command — "send 5 xlm to GXXX..."
-    const sendMatch = text.match(/send\s+(\d+\.?\d*)\s*(xlm|usdc|ngnx)?\s*(?:to\s+)?(G[A-Z0-9]{50,})/i);
+    const sendMatch = text.match(/send\s+(\d+\.?\d*)\s*(xlm|usdc|eurc)?\s*(?:to\s+)?(G[A-Z0-9]{50,})/i);
     if (sendMatch) {
       const [, amount, rawAsset, destination] = sendMatch;
       const asset = (rawAsset || 'XLM').toUpperCase();
@@ -114,7 +114,7 @@ const AIAssistant = ({ onNavigate }: AIAssistantProps) => {
     }
 
     // Loose send without valid address
-    const looseSend = lower.match(/send\s+(\d+\.?\d*)\s*(xlm|usdc|ngnx)?\s*(to\s+)?(.+)?/i);
+    const looseSend = lower.match(/send\s+(\d+\.?\d*)\s*(xlm|usdc|eurc)?\s*(to\s+)?(.+)?/i);
     if (looseSend) {
       const amount = looseSend[1];
       const asset = (looseSend[2] || 'XLM').toUpperCase();
