@@ -114,7 +114,7 @@ const AIAssistant = ({ onNavigate }: AIAssistantProps) => {
     }
 
     // Loose send without valid address
-    const looseSend = lower.match(/send\s+(\d+\.?\d*)\s*(xlm|usdc|ngnx)?\s*(to\s+)?(.+)?/i);
+    const looseSend = lower.match(/send\s+(\d+\.?\d*)\s*(xlm|usdc|eurc)?\s*(to\s+)?(.+)?/i);
     if (looseSend) {
       const amount = looseSend[1];
       const asset = (looseSend[2] || 'XLM').toUpperCase();

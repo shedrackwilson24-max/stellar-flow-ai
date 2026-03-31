@@ -1,7 +1,7 @@
-import { Home, Send, Compass, Bot, User, Clock, Users } from 'lucide-react';
+import { Home, Send, Compass, Bot, User, Clock, Users, CreditCard } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export type Tab = 'home' | 'send' | 'explore' | 'ai' | 'profile' | 'activity' | 'contacts';
+export type Tab = 'home' | 'send' | 'explore' | 'ai' | 'profile' | 'activity' | 'contacts' | 'card';
 
 interface BottomNavProps {
   activeTab: Tab;
